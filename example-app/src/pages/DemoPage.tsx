@@ -2,7 +2,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { useEffect, useRef, useState } from 'react'
-import { Box, Button, CircularProgress, TextField, Typography, useTheme } from '@mui/material'
+import { Box, Button, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography, useTheme } from '@mui/material'
 import { APP_TITLE, DEFAULT_SIZE_0_5_REM, DEFAULT_SIZE_1_REM } from '../constants/gui'
 import { useDebounceValue } from 'usehooks-ts';
 import { InfiniteScroll } from '../components/InfiniteScroll';
@@ -125,45 +125,68 @@ export const DemoPage = () => {
       mt: `${headerRef.current?.clientHeight}px`
     }}>
 
-      <InfiniteScroll<DataSampleType, DemoFilterModel, DemoSortModel>
-        headerHeight={headerHeight}
-        filterModel={filterModel}
-        sortModel={sortModel}
-        estimatedRowHeight={35}
+      <Table>
 
-        renderRow={row => <Box sx={{
-          m: DEFAULT_SIZE_1_REM,
-          p: DEFAULT_SIZE_1_REM,
-          border: '1px solid darkcyan',
+        <TableHead sx={{
+          position: 'sticky',
+          top: `${headerRef.current?.clientHeight}px`,
+          zIndex: 1,
+          background: '#202020'
         }}>
-          <Typography>id {row.id}: {row.text}</Typography>
-        </Box>}
+          <TableRow>
+            <TableCell>id</TableCell>
+            <TableCell>data</TableCell>
+          </TableRow>
+        </TableHead>
 
-        fetchData={async (pageSize: number, loadedCnt: number, filterModel?: DemoFilterModel, sortModel?: DemoSortModel) => {
-          let loadErr = false
-          let res: DataSampleType[] = []
+        <TableBody>
+          <InfiniteScroll<DataSampleType, DemoFilterModel, DemoSortModel>
+            headerHeight={headerHeight}
+            filterModel={filterModel}
+            sortModel={sortModel}
+            estimatedRowHeight={35}
 
-          try {
-            const q = await fakeDataFetcherApi(loadedCnt, pageSize,
-              filterModel?.filter ?? '',
-              sortModel === undefined || sortModel?.modeAsc === true)
+            renderRow={(row, rowIdx) => <TableRow key={`row-${rowIdx}`} sx={{
+              m: DEFAULT_SIZE_1_REM,
+              p: DEFAULT_SIZE_1_REM
+            }}>
+              <TableCell>
+                <Typography>{row.id}</Typography>
+              </TableCell>
 
-            res = q
-          }
+              <TableCell>
+                <Typography>{row.text}</Typography>
+              </TableCell>
+            </TableRow>}
 
-          catch (_ex) {
+            fetchData={async (pageSize: number, loadedCnt: number, filterModel?: DemoFilterModel, sortModel?: DemoSortModel) => {
+              let loadErr = false
+              let res: DataSampleType[] = []
 
-            loadErr = true
-          }
+              try {
+                const q = await fakeDataFetcherApi(loadedCnt, pageSize,
+                  filterModel?.filter ?? '',
+                  sortModel === undefined || sortModel?.modeAsc === true)
 
-          return { rows: res, error: loadErr }
-        }}
+                res = q
+              }
 
-        onLoadingChanged={x => setLoading(x)}
-        onItemsChanged={x => setItems(x)}
-        onAvailHeightChanged={x => setAvailHeight(x)}
-        onPageSizeChanged={x => setPageSize(x)}
-      />
+              catch (_ex) {
+
+                loadErr = true
+              }
+
+              return { rows: res, error: loadErr }
+            }}
+
+            onLoadingChanged={x => setLoading(x)}
+            onItemsChanged={x => setItems(x)}
+            onAvailHeightChanged={x => setAvailHeight(x)}
+            onPageSizeChanged={x => setPageSize(x)}
+          />
+        </TableBody>
+
+      </Table>
 
       {loading && <Box sx={{
         display: 'flex',

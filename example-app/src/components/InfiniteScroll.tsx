@@ -6,7 +6,7 @@ const DEFAULT_RESIZE_DEBOUNCE_MS = 1000
 const DEFAULT_ESTIMATED_ROW_HEIGHT = 16
 
 interface InfiniteScrollProps<T, F, S> {
-    headerHeight?: number,    
+    headerHeight?: number,
     renderRow: (row: T, idx?: number) => JSX.Element,
     fetchData: (pageSize: number, loadedCnt: number, filterModel?: F, sortModel?: S) => Promise<{ rows: T[], error: boolean }>,
     filterModel?: F,
@@ -29,10 +29,10 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
     const [pageSize, setPageSize] = useState(0)
     const [noMoreData, setNoMoreData] = useState(false)
     const [initialLoadFired, setInitialLoadFired] = useState(false)
-    const [availHeight, setAvailHeight] = useState(0)    
+    const [availHeight, setAvailHeight] = useState(0)
 
     const {
-        headerHeight,        
+        headerHeight,
         renderRow,
         fetchData,
         estimatedRowHeight,
@@ -167,11 +167,5 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
         return () => window.removeEventListener('resize', debounceResize)
     }, [])
 
-    return <Box>
-
-        {items.map((item, itemIdx) => <Box key={`item-${itemIdx}`}>
-            {renderRow(item, itemIdx)}
-        </Box>)}
-
-    </Box>
+    return items.map((item, itemIdx) => renderRow(item, itemIdx))
 }
