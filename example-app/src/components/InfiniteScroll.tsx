@@ -30,6 +30,7 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
     const [noMoreData, setNoMoreData] = useState(false)
     const [initialLoadFired, setInitialLoadFired] = useState(false)
     const [availHeight, setAvailHeight] = useState(0)
+    const [loadErr, setLoadErr] = useState(false)
 
     const {
         headerHeight,
@@ -52,7 +53,7 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
     useEffect(() => onAvailHeightChanged?.(availHeight), [availHeight])
 
     useEffect(() => {
-        if (noMoreData || loading || items.length >= loadItemsTill) return
+        if (loadErr || noMoreData || loading || items.length >= loadItemsTill) return
 
         setLoading(true)
 
@@ -83,9 +84,11 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
                     }
                 }
 
-                if (!loadErr) {
+                if (!loadErr)
                     setItems(newItems)
-                }
+
+                else
+                    setLoadErr(true)
             }
 
             finally {
