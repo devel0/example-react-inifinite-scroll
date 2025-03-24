@@ -20,6 +20,8 @@ npm run dev
 
 to debug from vscode hit F5
 
+[sample code](./example-app/src/pages/DemoPage.tsx)
+
 ## how this project was built
 
 ```sh
