@@ -5,10 +5,10 @@
 ## features
 
 - load filtered rows on demand for resize occurred or scrolled to the end
-- fixed header can be managed by placing infinite scroll with a top margin
-- count of rows to load in order to fill the page are computed by a generic customizable row height
+- scrollable container with fixed or autofit height
+- count of rows to load in order to fill the page are computed by a dummy customizable row height
 - feedbacks for pagesize, items, loading in progress, available height changed
-- resize window feed more data if needed in a debounced way
+- handle window resize to extend if autofit height mode used
 - sort and filter model applicable and usable in the fetchData method
 
 ## quickstart

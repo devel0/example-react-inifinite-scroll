@@ -1,12 +1,12 @@
-import { Box } from '@mui/material'
-import { JSX, useCallback, useEffect, useMemo, useState } from 'react'
-import { useDebounceCallback, useEventListener } from 'usehooks-ts'
+import { JSX, RefObject, useEffect, useMemo, useState } from 'react'
 
-const DEFAULT_RESIZE_DEBOUNCE_MS = 1000
 const DEFAULT_ESTIMATED_ROW_HEIGHT = 16
 
 interface InfiniteScrollProps<T, F, S> {
-    headerHeight?: number,
+    containerRef: RefObject<HTMLDivElement | null>,
+    headerRef: RefObject<any>,
+    containerFit?: boolean,
+
     renderRow: (row: T, idx?: number) => JSX.Element,
     fetchData: (pageSize: number, loadedCnt: number, filterModel?: F, sortModel?: S) => Promise<{ rows: T[], error: boolean }>,
     filterModel?: F,
@@ -14,12 +14,10 @@ interface InfiniteScrollProps<T, F, S> {
 
     /** use smaller value that a row can assume to avoid lock new loads */
     estimatedRowHeight?: number,
-    resizeDebounceMs?: number,
 
     onPageSizeChanged?: (pageSize: number) => void,
     onItemsChanged?: (items: T[]) => void,
     onLoadingChanged?: (loading: boolean) => void,
-    onAvailHeightChanged?: (availHeight: number) => void
 }
 
 export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
@@ -29,28 +27,27 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
     const [pageSize, setPageSize] = useState(0)
     const [noMoreData, setNoMoreData] = useState(false)
     const [initialLoadFired, setInitialLoadFired] = useState(false)
-    const [availHeight, setAvailHeight] = useState(0)
     const [loadErr, setLoadErr] = useState(false)
+    const [lastScrollTop, setLastScrollTop] = useState(0)
 
     const {
-        headerHeight,
+        containerRef,
+        headerRef,
+        containerFit,
         renderRow,
         fetchData,
         estimatedRowHeight,
-        resizeDebounceMs,
         filterModel,
         sortModel,
 
         onPageSizeChanged,
         onItemsChanged,
-        onLoadingChanged,
-        onAvailHeightChanged
+        onLoadingChanged
     } = props
 
     useEffect(() => onPageSizeChanged?.(pageSize), [pageSize])
     useEffect(() => onItemsChanged?.(items), [items])
     useEffect(() => onLoadingChanged?.(loading), [loading])
-    useEffect(() => onAvailHeightChanged?.(availHeight), [availHeight])
 
     useEffect(() => {
         if (loadErr || noMoreData || loading || items.length >= loadItemsTill) return
@@ -72,15 +69,13 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
                         break
                     }
 
-                    if (q.rows.length === 0) {
+                    newItems = [...newItems, ...q.rows]
+
+                    loadedCnt += q.rows.length
+
+                    if (q.rows.length < pageSize) {
                         setNoMoreData(true)
                         break;
-                    }
-
-                    else {
-                        newItems = [...newItems, ...q.rows]
-
-                        loadedCnt += q.rows.length
                     }
                 }
 
@@ -99,6 +94,9 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
         loadItems()
     }, [noMoreData, loading, items, loadItemsTill, pageSize, filterModel, sortModel])
 
+    //
+    // initial load
+    //
     useMemo(() => {
         if (pageSize > 0 && !initialLoadFired && loadItemsTill > 0) {
             setInitialLoadFired(true)
@@ -106,49 +104,32 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
         }
     }, [initialLoadFired, pageSize, loadItemsTill])
 
-    const evalLoadMore = useCallback(() => {
-        if (!noMoreData && !loading && loadItemsTill > 0) {
-            const scrollMore = document.body.scrollHeight - window.scrollY < window.innerHeight
-
-            if (scrollMore) {
-                setLoadItemsTill(prevCnt => prevCnt + pageSize + 1)
-            }
-        }
-    }, [loadItemsTill, items, pageSize])
-
     //
     // reset items on filter debounce
     //
     useMemo(() => {
         if (pageSize > 0) {
+            // console.log(`****reset status`)            
+            setLastScrollTop(0)
             setInitialLoadFired(false)
             setNoMoreData(false)
             setItems([])
             setLoadItemsTill(pageSize)
-            evalLoadMore()
         }
     }, [filterModel, sortModel])
 
     //
-    // handle scroll
-    //
-    useEventListener('scroll', evalLoadMore)
-
+    // recompute page size helper method
+    //    
     const recomputePageSize = () => {
-        let h = window.innerHeight - (headerHeight ?? 0)
-        const ps = Math.ceil(h / (estimatedRowHeight === undefined ? DEFAULT_ESTIMATED_ROW_HEIGHT : estimatedRowHeight))
+        const ch = (containerRef?.current?.clientHeight ?? window.innerHeight)
+        const hh = (headerRef?.current?.clientHeight ?? 0)
+        let height = ch - hh
 
-        setAvailHeight(h)
+        const ps = Math.ceil(height / (estimatedRowHeight === undefined ? DEFAULT_ESTIMATED_ROW_HEIGHT : estimatedRowHeight))
+
         setPageSize(ps)
     }
-
-    //
-    // infer page size from available window height
-    //
-    useEffect(() => {
-        if (headerHeight !== undefined)
-            recomputePageSize()
-    }, [headerHeight])
 
     //
     // eval pageSize extended due to resize
@@ -156,18 +137,57 @@ export function InfiniteScroll<T, F, S>(props: InfiniteScrollProps<T, F, S>) {
     useEffect(() => {
         if (pageSize > loadItemsTill)
             setLoadItemsTill(pageSize + 1)
-    }, [pageSize])
+    }, [pageSize, loadItemsTill])
 
     //
-    // handle resize
-    //    
-    const debounceResize = useDebounceCallback(() => {
-        recomputePageSize()
-    }, resizeDebounceMs === undefined ? DEFAULT_RESIZE_DEBOUNCE_MS : resizeDebounceMs)
+    // handle scroll
+    //         
+    useEffect(() => {
+        if (pageSize === 0) {
+
+            if (containerFit && containerRef.current) {
+                const element = containerRef.current
+
+                const h = window.innerHeight - (element.offsetTop ?? 0) - 16
+
+                element.style.height = `${h}px`
+            }
+
+            recomputePageSize()
+        }
+
+        const evalScroll = () => {
+            if (containerRef.current) {
+                const element = containerRef.current
+                if (element.scrollTop < lastScrollTop) return
+
+                setLastScrollTop(element.scrollTop <= 0 ? 0 : element.scrollTop)
+                if (element.scrollTop + element.offsetHeight >= element.scrollHeight) {
+                    setLoadItemsTill(prev => prev + pageSize)
+                }
+            }
+        }
+
+        containerRef.current?.addEventListener('scroll', evalScroll)
+        return () => {
+            containerRef.current?.removeEventListener('scroll', evalScroll)
+        }
+    }, [containerRef, loadItemsTill])
+
+    const windowResized = () => {
+        if (containerFit && containerRef.current) {
+            const h = window.innerHeight - (containerRef.current?.offsetTop ?? 0) - 16
+
+            const element = containerRef.current
+            element.style.height = `${h}px`
+
+            recomputePageSize()
+        }
+    }
 
     useEffect(() => {
-        window.addEventListener('resize', debounceResize)
-        return () => window.removeEventListener('resize', debounceResize)
+        window.addEventListener('resize', windowResized)
+        return () => window.removeEventListener('resize', windowResized)
     }, [])
 
     return items.map((item, itemIdx) => renderRow(item, itemIdx))

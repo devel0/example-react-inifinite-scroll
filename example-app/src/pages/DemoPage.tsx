@@ -17,14 +17,13 @@ interface DemoSortModel {
 }
 
 export const DemoPage = () => {
-  const headerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<any>(null)
   const theme = useTheme()
   const [filter, setFilter] = useState("")
-  const [debouncedFilter, setDebouncedFilter] = useDebounceValue("", 250)
-  const [headerHeight, setHeaderHeight] = useState<number | undefined>(undefined)
+  const [debouncedFilter, setDebouncedFilter] = useDebounceValue("", 250)  
   const [loading, setLoading] = useState<boolean>(false)
   const [items, setItems] = useState<DataSampleType[]>([])
-  const [availHeight, setAvailHeight] = useState<number>(0)
   const [pageSize, setPageSize] = useState(0)
   const [filterModel, setFilterModel] = useState<DemoFilterModel | undefined>(undefined)
   const [sortModel, setSortModel] = useState<DemoSortModel | undefined>(undefined)
@@ -32,17 +31,6 @@ export const DemoPage = () => {
   useEffect(() => {
     document.title = `${APP_TITLE} - Test`
   }, [])
-
-  //
-  // infer page size from available window height
-  //
-  useEffect(() => {
-    if (headerRef.current) {
-      const h = headerRef.current.clientHeight
-      console.log(`  ***** SETTING HEADER HEIGHT ${h}`)
-      setHeaderHeight(h)
-    }
-  }, [headerRef])
 
   useEffect(() => {
     setFilterModel({
@@ -54,15 +42,12 @@ export const DemoPage = () => {
 
     {/* HEADER SEARCH */}
     <Box
-      ref={headerRef}
+
       sx={{
         width: '100%',
         background: theme.palette.background.default,
-        position: 'fixed',
-        zIndex: 1,
-        top: 0, // or global.appBarHeight if any
-        pt: DEFAULT_SIZE_0_5_REM,
-        pb: DEFAULT_SIZE_0_5_REM
+        mt: DEFAULT_SIZE_1_REM,
+        mb: DEFAULT_SIZE_1_REM        
       }}>
 
       <Box sx={{
@@ -86,7 +71,6 @@ export const DemoPage = () => {
         }}>
           <Box sx={{ display: 'flex' }}>
             <Box>
-              <Typography>wheight:{window.innerHeight} - hHeight:{headerHeight} = {availHeight}</Typography>
               <Typography>items:{items.length} ( pageSize:{pageSize} )</Typography>
             </Box>
             <Box>
@@ -120,19 +104,22 @@ export const DemoPage = () => {
     </Box>
 
     {/* INFINITE SCROLL DATA */}
-    <Box sx={{
-      // border: '1px solid gray',
-      mt: `${headerRef.current?.clientHeight}px`
-    }}>
+    <Box
+      ref={containerRef}
+      sx={{
+        border: '1px solid yellow',
+        overflowY: 'scroll'
+      }}>
 
       <Table>
 
-        <TableHead sx={{
-          position: 'sticky',
-          top: `${headerRef.current?.clientHeight}px`,
-          zIndex: 1,
-          background: '#202020'
-        }}>
+        <TableHead
+          ref={headerRef}
+          sx={{
+            position: 'sticky',
+            top: 0,
+            background: '#202020'
+          }}>
           <TableRow>
             <TableCell>id</TableCell>
             <TableCell>data</TableCell>
@@ -141,10 +128,12 @@ export const DemoPage = () => {
 
         <TableBody>
           <InfiniteScroll<DataSampleType, DemoFilterModel, DemoSortModel>
-            headerHeight={headerHeight}
+            containerRef={containerRef}
+            headerRef={headerRef}
+            containerFit
             filterModel={filterModel}
             sortModel={sortModel}
-            estimatedRowHeight={35}
+            estimatedRowHeight={50}
 
             renderRow={(row, rowIdx) => <TableRow key={`row-${rowIdx}`} sx={{
               m: DEFAULT_SIZE_1_REM,
@@ -181,7 +170,6 @@ export const DemoPage = () => {
 
             onLoadingChanged={x => setLoading(x)}
             onItemsChanged={x => setItems(x)}
-            onAvailHeightChanged={x => setAvailHeight(x)}
             onPageSizeChanged={x => setPageSize(x)}
           />
         </TableBody>
