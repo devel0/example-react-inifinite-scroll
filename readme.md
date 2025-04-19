@@ -11,6 +11,11 @@
 - handle window resize to extend if autofit height mode used
 - sort and filter model applicable and usable in the fetchData method
 
+## alternatives
+
+- [react window](https://react-window.vercel.app/#/examples/list/fixed-size)
+- [base table](https://autodesk.github.io/react-base-table)
+
 ## quickstart
 
 ```sh
